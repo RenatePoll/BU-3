@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fictieve GPS-kaart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; width: 100vw; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // --- Stap 1: Kies je referentiepunten ---
+    const ref_lat = 52.2345;    // echte latitude van jouw straat
+    const ref_lon = 6.7890;     // echte longitude van jouw straat
+
+    const fict_base_lat = 52.3456;  // fictieve basis latitude
+    const fict_base_lon = 6.8901;   // fictieve basis longitude
+
+    const scale = 50; // schaalfactor
+
+    // --- Stap 2: Maak de kaart ---
+    const map = L.map('map').setView([fict_base_lat, fict_base_lon], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Marker voor fictieve locatie
+    const marker = L.marker([fict_base_lat, fict_base_lon]).addTo(map)
+      .bindPopup('Hier ben jij in de fictieve wereld!')
+      .openPopup();
+
+    // --- Stap 3: Functie om GPS om te rekenen ---
+    function gpsToFict(lat, lon) {
+      const delta_lat = lat - ref_lat;
+      const delta_lon = lon - ref_lon;
+      const fict_lat = fict_base_lat + delta_lat * scale;
+      const fict_lon = fict_base_lon + delta_lon * scale;
+      return [fict_lat, fict_lon];
+    }
+
+    // --- Stap 4: Realtime GPS update ---
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(position => {
+        const gps_lat = position.coords.latitude;
+        const gps_lon = position.coords.longitude;
+
+        const [f_lat, f_lon] = gpsToFict(gps_lat, gps_lon);
+
+        marker.setLatLng([f_lat, f_lon]);
+        map.setView([f_lat, f_lon]);
+      }, error => {
+        alert('GPS niet beschikbaar: ' + error.message);
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 1000
+      });
+    } else {
+      alert('Geolocation niet ondersteund!');
+    }
+
+  </script>
+</body>
+</html>
