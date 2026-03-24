@@ -69,6 +69,15 @@ if(speed_ms != null){
 
   console.log("Fictieve snelheid:", fict_speed);
 }
+    const heading = position.coords.heading;
+
+if(heading != null){
+  marker.setRotationAngle(heading);
+}
+    map.panTo([f_lat, f_lon], {
+  animate: true,
+  duration: 1
+});
   </script>
 </body>
 </html>
