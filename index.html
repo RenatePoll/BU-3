@@ -61,7 +61,14 @@
     } else {
       alert('Geolocation niet ondersteund!');
     }
+const speed_ms = position.coords.speed;
 
+if(speed_ms != null){
+  const speed_kmh = speed_ms * 3.6;
+  const fict_speed = speed_kmh * scale;
+
+  console.log("Fictieve snelheid:", fict_speed);
+}
   </script>
 </body>
 </html>
