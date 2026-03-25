@@ -1,83 +1,384 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Fictieve GPS-kaart</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>
-    #map { height: 100vh; width: 100vw; }
-  </style>
+<title>Fictieve Flight Map</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+
+#map{
+height:100vh;
+width:100vw;
+}
+
+#hud{
+
+position:fixed;
+top:10px;
+left:10px;
+
+background:black;
+color:lime;
+
+padding:10px;
+
+font-family:monospace;
+
+border-radius:8px;
+
+z-index:1000;
+
+}
+
+.plane{
+
+font-size:30px;
+
+}
+
+</style>
+
 </head>
+
 <body>
-  <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // --- Stap 1: Kies je referentiepunten ---
-    const ref_lat = 53.1337;    // echte latitude van jouw straat
-    const ref_lon = 6.0578;     // echte longitude van jouw straat
+<div id="map"></div>
 
-    const fict_base_lat = 53.2286;  // fictieve basis latitude
-    const fict_base_lon = 5.7600;   // fictieve basis longitude
+<div id="hud">
 
-    const scale = 50; // schaalfactor
+Speed: <span id="speed">0</span> km/h<br>
 
-    // --- Stap 2: Maak de kaart ---
-    const map = L.map('map').setView([fict_base_lat, fict_base_lon], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+Distance home:
+<span id="distance">0</span> km<br>
 
-    // Marker voor fictieve locatie
-    const marker = L.marker([fict_base_lat, fict_base_lon]).addTo(map)
-      .bindPopup('007 Renate Poll');
-      .openPopup();
+Heading:
+<span id="heading">0</span>°<br>
 
-    // --- Stap 3: Functie om GPS om te rekenen ---
-    function gpsToFict(lat, lon) {
-      const delta_lat = lat - ref_lat;
-      const delta_lon = lon - ref_lon;
-      const fict_lat = fict_base_lat + delta_lat * scale;
-      const fict_lon = fict_base_lon + delta_lon * scale;
-      return [fict_lat, fict_lon];
-    }
+</div>
 
-    // --- Stap 4: Realtime GPS update ---
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(position => {
-        const gps_lat = position.coords.latitude;
-        const gps_lon = position.coords.longitude;
 
-        const [f_lat, f_lon] = gpsToFict(gps_lat, gps_lon);
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-        marker.setLatLng([f_lat, f_lon]);
-        map.setView([f_lat, f_lon]);
-      }, error => {
-        alert('GPS niet beschikbaar: ' + error.message);
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 1000
-      });
-    } else {
-      alert('Geolocation niet ondersteund!');
-    }
-const speed_ms = position.coords.speed;
 
-if(speed_ms != null){
-  const speed_kmh = speed_ms * 3.6;
-  const fict_speed = speed_kmh * scale;
+<script>
 
-  console.log("Fictieve snelheid:", fict_speed);
-}
-    const heading = position.coords.heading;
+//////////////////////////////
+// REFERENTIEPUNT
+//////////////////////////////
 
-if(heading != null){
-  marker.setRotationAngle(heading);
-}
-    map.panTo([f_lat, f_lon], {
-  animate: true,
-  duration: 1
+const ref_lat = 53.1337;
+const ref_lon = 6.0578;
+
+const fict_ref_lat = 53.2286;
+const fict_ref_lon = 5.7600;
+
+const scale = 50;
+
+
+//////////////////////////////
+// FICTIEVE THUISBASIS
+//////////////////////////////
+
+const home_lat = fict_ref_lat;
+const home_lon = fict_ref_lon;
+
+
+//////////////////////////////
+// KAART
+//////////////////////////////
+
+const map =
+L.map('map')
+.setView(
+[fict_ref_lat,fict_ref_lon],
+13
+);
+
+L.tileLayer(
+
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+{maxZoom:19}
+
+).addTo(map);
+
+
+//////////////////////////////
+// VLIEGTUIG ICOON
+//////////////////////////////
+
+const planeIcon = L.divIcon({
+
+html:'✈️',
+
+className:'plane',
+
+iconSize:[30,30]
+
 });
-  </script>
+
+
+let marker =
+L.marker(
+[fict_ref_lat,fict_ref_lon],
+{icon:planeIcon}
+).addTo(map);
+
+
+//////////////////////////////
+// POSITIE OMREKENING
+//////////////////////////////
+
+function gpsToFict(lat,lon){
+
+let dlat =
+lat - ref_lat;
+
+let dlon =
+lon - ref_lon;
+
+let fict_lat =
+fict_ref_lat +
+dlat * scale;
+
+let fict_lon =
+fict_ref_lon +
+dlon * scale;
+
+return [fict_lat,fict_lon];
+
+}
+
+
+//////////////////////////////
+// AFSTAND BEREKENEN
+//////////////////////////////
+
+function distance(lat1,lon1,lat2,lon2){
+
+let R=6371;
+
+let dLat =
+(lat2-lat1) *
+Math.PI/180;
+
+let dLon =
+(lon2-lon1) *
+Math.PI/180;
+
+let a=
+
+Math.sin(dLat/2)*
+Math.sin(dLat/2)+
+
+Math.cos(lat1*Math.PI/180)*
+
+Math.cos(lat2*Math.PI/180)*
+
+Math.sin(dLon/2)*
+
+Math.sin(dLon/2);
+
+let c=
+2*Math.atan2(
+Math.sqrt(a),
+Math.sqrt(1-a)
+);
+
+return R*c;
+
+}
+
+
+//////////////////////////////
+// RICHTING
+//////////////////////////////
+
+function bearing(lat1,lon1,lat2,lon2){
+
+let y =
+Math.sin(
+(lon2-lon1)*
+Math.PI/180
+)
+
+*
+Math.cos(lat2*Math.PI/180);
+
+let x =
+
+Math.cos(lat1*Math.PI/180)*
+
+Math.sin(lat2*Math.PI/180)
+
+-
+
+Math.sin(lat1*Math.PI/180)*
+
+Math.cos(lat2*Math.PI/180)*
+
+Math.cos(
+(lon2-lon1)*
+Math.PI/180
+);
+
+let brng =
+Math.atan2(y,x);
+
+brng =
+brng * 180/Math.PI;
+
+return (brng+360)%360;
+
+}
+
+
+
+//////////////////////////////
+// SPEED
+//////////////////////////////
+
+let lastLat=null;
+let lastLon=null;
+let lastTime=null;
+
+
+
+navigator.geolocation.watchPosition(
+
+pos=>{
+
+let lat=
+pos.coords.latitude;
+
+let lon=
+pos.coords.longitude;
+
+let now=
+Date.now();
+
+
+let fict =
+gpsToFict(lat,lon);
+
+
+marker.setLatLng(fict);
+
+map.setView(fict);
+
+
+//////////////////////////////
+// SNELHEID
+//////////////////////////////
+
+if(lastLat){
+
+let dist =
+distance(
+lastLat,
+lastLon,
+lat,
+lon
+);
+
+let dt=
+(now-lastTime)/1000;
+
+let speed=
+(dist/dt)*3600;
+
+speed =
+speed*scale;
+
+document
+.getElementById("speed")
+.innerText=
+speed.toFixed(1);
+
+}
+
+
+//////////////////////////////
+// AFSTAND TOT BASIS
+//////////////////////////////
+
+let distHome=
+
+distance(
+
+fict[0],
+fict[1],
+
+home_lat,
+home_lon
+
+);
+
+document
+.getElementById("distance")
+.innerText=
+distHome.toFixed(1);
+
+
+
+//////////////////////////////
+// RICHTING
+//////////////////////////////
+
+if(lastLat){
+
+let head=
+
+bearing(
+lastLat,
+lastLon,
+lat,
+lon
+);
+
+document
+.getElementById("heading")
+.innerText=
+head.toFixed(0);
+
+marker
+.getElement()
+.style
+.transform=
+"rotate("+head+"deg)";
+
+}
+
+
+
+lastLat=lat;
+lastLon=lon;
+lastTime=now;
+
+
+},
+
+error=>{
+
+alert(error.message);
+
+},
+
+{
+
+enableHighAccuracy:true
+
+}
+
+);
+
+
+</script>
+
 </body>
+
 </html>
