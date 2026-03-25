@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html>
-<head>
-<title>Fictieve Flight Map</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>
+
+<title>Fictieve Flight HUD</title>
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet"
 href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -18,13 +21,15 @@ width:100vw;
 #hud{
 
 position:fixed;
+
 top:10px;
 left:10px;
 
-background:black;
-color:lime;
+background:rgba(0,0,0,0.75);
 
-padding:10px;
+color:#00ff00;
+
+padding:12px;
 
 font-family:monospace;
 
@@ -32,11 +37,17 @@ border-radius:8px;
 
 z-index:1000;
 
+font-size:14px;
+
 }
 
 .plane{
 
-font-size:30px;
+font-size:32px;
+
+transform-origin:center;
+
+transition:transform 0.25s linear;
 
 }
 
@@ -50,53 +61,61 @@ font-size:30px;
 
 <div id="hud">
 
-Speed: <span id="speed">0</span> km/h<br>
+SPD:
+<span id="speed">0</span> km/h<br>
 
-Distance home:
+HDG:
+<span id="heading">0</span>°<br>
+
+DST HOME:
 <span id="distance">0</span> km<br>
 
-Heading:
-<span id="heading">0</span>°<br>
+HOME BRG:
+<span id="homeBearing">0</span>°
 
 </div>
 
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src=
+"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
 
 
 <script>
 
-//////////////////////////////
-// REFERENTIEPUNT
-//////////////////////////////
+//////////////////////////
+// CALIBRATIEPUNT
+//////////////////////////
 
-const ref_lat = 53.1337;
-const ref_lon = 6.0578;
+const ref_lat=53.1337;
+const ref_lon=6.0578;
 
-const fict_ref_lat = 53.2286;
-const fict_ref_lon = 5.7600;
+const fict_ref_lat=53.2286;
+const fict_ref_lon=5.7600;
 
-const scale = 50;
-
-
-//////////////////////////////
-// FICTIEVE THUISBASIS
-//////////////////////////////
-
-const home_lat = fict_ref_lat;
-const home_lon = fict_ref_lon;
+const scale=50;
 
 
-//////////////////////////////
+//////////////////////////
+// HOME BASE
+//////////////////////////
+
+const home_lat=fict_ref_lat;
+const home_lon=fict_ref_lon;
+
+
+//////////////////////////
 // KAART
-//////////////////////////////
+//////////////////////////
 
-const map =
+const map=
+
 L.map('map')
 .setView(
 [fict_ref_lat,fict_ref_lon],
 13
 );
+
 
 L.tileLayer(
 
@@ -107,83 +126,157 @@ L.tileLayer(
 ).addTo(map);
 
 
-//////////////////////////////
-// VLIEGTUIG ICOON
-//////////////////////////////
+//////////////////////////
+// RADAR RINGEN
+//////////////////////////
 
-const planeIcon = L.divIcon({
+for(let i=1;i<=3;i++){
+
+L.circle(
+
+[home_lat,home_lon],
+
+{
+
+radius:i*10000,
+
+color:'green',
+
+fill:false,
+
+weight:1
+
+}
+
+).addTo(map);
+
+}
+
+
+//////////////////////////
+// VLIEGTUIG
+//////////////////////////
+
+const planeIcon=
+
+L.divIcon({
 
 html:'✈️',
 
 className:'plane',
 
-iconSize:[30,30]
+iconSize:[30,30],
+
+iconAnchor:[15,15]
 
 });
 
 
-let marker =
+let marker=
+
 L.marker(
 [fict_ref_lat,fict_ref_lon],
 {icon:planeIcon}
 ).addTo(map);
 
 
-//////////////////////////////
-// POSITIE OMREKENING
-//////////////////////////////
+//////////////////////////
+// HOME MARKER
+//////////////////////////
+
+L.circleMarker(
+
+[home_lat,home_lon],
+
+{
+
+radius:6,
+
+color:'red'
+
+}
+
+).addTo(map);
+
+
+//////////////////////////
+// TRAIL
+//////////////////////////
+
+let trail=[];
+
+let trailLine=
+
+L.polyline(
+trail,
+{color:'lime'}
+).addTo(map);
+
+
+//////////////////////////
+// SMOOTH HEADING
+//////////////////////////
+
+let smoothHeading=0;
+
+let lastLat=null;
+let lastLon=null;
+let lastTime=null;
+
+
+//////////////////////////
+// OMREKENING
+//////////////////////////
 
 function gpsToFict(lat,lon){
 
-let dlat =
-lat - ref_lat;
+let dlat=
+lat-ref_lat;
 
-let dlon =
-lon - ref_lon;
+let dlon=
+lon-ref_lon;
 
-let fict_lat =
-fict_ref_lat +
-dlat * scale;
+let flat=
+fict_ref_lat+
+dlat*scale;
 
-let fict_lon =
-fict_ref_lon +
-dlon * scale;
+let flon=
+fict_ref_lon+
+dlon*scale;
 
-return [fict_lat,fict_lon];
+return [flat,flon];
 
 }
 
 
-//////////////////////////////
-// AFSTAND BEREKENEN
-//////////////////////////////
+//////////////////////////
+// AFSTAND
+//////////////////////////
 
 function distance(lat1,lon1,lat2,lon2){
 
 let R=6371;
 
-let dLat =
-(lat2-lat1) *
+let dLat=
+(lat2-lat1)*
 Math.PI/180;
 
-let dLon =
-(lon2-lon1) *
+let dLon=
+(lon2-lon1)*
 Math.PI/180;
 
 let a=
 
-Math.sin(dLat/2)*
-Math.sin(dLat/2)+
+Math.sin(dLat/2)**2+
 
 Math.cos(lat1*Math.PI/180)*
 
 Math.cos(lat2*Math.PI/180)*
 
-Math.sin(dLon/2)*
-
-Math.sin(dLon/2);
+Math.sin(dLon/2)**2;
 
 let c=
+
 2*Math.atan2(
 Math.sqrt(a),
 Math.sqrt(1-a)
@@ -194,13 +287,14 @@ return R*c;
 }
 
 
-//////////////////////////////
-// RICHTING
-//////////////////////////////
+//////////////////////////
+// BEARING
+//////////////////////////
 
 function bearing(lat1,lon1,lat2,lon2){
 
-let y =
+let y=
+
 Math.sin(
 (lon2-lon1)*
 Math.PI/180
@@ -209,7 +303,7 @@ Math.PI/180
 *
 Math.cos(lat2*Math.PI/180);
 
-let x =
+let x=
 
 Math.cos(lat1*Math.PI/180)*
 
@@ -226,27 +320,20 @@ Math.cos(
 Math.PI/180
 );
 
-let brng =
+let brng=
 Math.atan2(y,x);
 
-brng =
-brng * 180/Math.PI;
+brng=
+brng*180/Math.PI;
 
 return (brng+360)%360;
 
 }
 
 
-
-//////////////////////////////
-// SPEED
-//////////////////////////////
-
-let lastLat=null;
-let lastLon=null;
-let lastTime=null;
-
-
+//////////////////////////
+// GPS TRACKING
+//////////////////////////
 
 navigator.geolocation.watchPosition(
 
@@ -262,22 +349,35 @@ let now=
 Date.now();
 
 
-let fict =
+let fict=
 gpsToFict(lat,lon);
 
 
 marker.setLatLng(fict);
 
-map.setView(fict);
+map.panTo(fict);
 
 
-//////////////////////////////
-// SNELHEID
-//////////////////////////////
+//////////////////////////
+// TRAIL
+//////////////////////////
+
+trail.push(fict);
+
+if(trail.length>200)
+trail.shift();
+
+trailLine.setLatLngs(trail);
+
+
+//////////////////////////
+// SPEED
+//////////////////////////
 
 if(lastLat){
 
-let dist =
+let dist=
+
 distance(
 lastLat,
 lastLon,
@@ -291,20 +391,74 @@ let dt=
 let speed=
 (dist/dt)*3600;
 
-speed =
+speed=
 speed*scale;
 
 document
 .getElementById("speed")
 .innerText=
-speed.toFixed(1);
+speed.toFixed(0);
 
 }
 
 
-//////////////////////////////
-// AFSTAND TOT BASIS
-//////////////////////////////
+//////////////////////////
+// HEADING
+//////////////////////////
+
+if(lastLat){
+
+let newHeading=
+
+bearing(
+lastLat,
+lastLon,
+lat,
+lon
+);
+
+
+let diff=
+newHeading-
+smoothHeading;
+
+if(diff>180)
+diff-=360;
+
+if(diff<-180)
+diff+=360;
+
+
+smoothHeading+=
+diff*0.15;
+
+
+document
+.getElementById("heading")
+.innerText=
+smoothHeading.toFixed(0);
+
+
+let el=
+marker.getElement();
+
+if(el){
+
+el.style.transform=
+
+"translate(-15px,-15px) rotate("
++
+smoothHeading+
+"deg)";
+
+}
+
+}
+
+
+//////////////////////////
+// DISTANCE HOME
+//////////////////////////
 
 let distHome=
 
@@ -324,35 +478,26 @@ document
 distHome.toFixed(1);
 
 
+//////////////////////////
+// HOME BEARING
+//////////////////////////
 
-//////////////////////////////
-// RICHTING
-//////////////////////////////
-
-if(lastLat){
-
-let head=
+let homeBrg=
 
 bearing(
-lastLat,
-lastLon,
-lat,
-lon
+
+fict[0],
+fict[1],
+
+home_lat,
+home_lon
+
 );
 
 document
-.getElementById("heading")
+.getElementById("homeBearing")
 .innerText=
-head.toFixed(0);
-
-marker
-.getElement()
-.style
-.transform=
-"rotate("+head+"deg)";
-
-}
-
+homeBrg.toFixed(0);
 
 
 lastLat=lat;
