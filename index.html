@@ -41,13 +41,13 @@ font-size:14px;
 
 }
 
-.plane{
+#planeSymbol{
 
 font-size:32px;
 
 transform-origin:center;
 
-transition:transform 0.25s linear;
+transition:transform 0.2s linear;
 
 }
 
@@ -84,7 +84,7 @@ HOME BRG:
 <script>
 
 //////////////////////////
-// CALIBRATIEPUNT
+// CALIBRATIE
 //////////////////////////
 
 const ref_lat=53.1337;
@@ -161,9 +161,7 @@ const planeIcon=
 
 L.divIcon({
 
-html:'✈️',
-
-className:'plane',
+html:'<div id="planeSymbol">✈️</div>',
 
 iconSize:[30,30],
 
@@ -214,7 +212,7 @@ trail,
 
 
 //////////////////////////
-// SMOOTH HEADING
+// VARIABELEN
 //////////////////////////
 
 let smoothHeading=0;
@@ -439,14 +437,15 @@ document
 smoothHeading.toFixed(0);
 
 
-let el=
-marker.getElement();
+let plane=
 
-if(el){
+document.getElementById("planeSymbol");
 
-el.style.transform=
+if(plane){
 
-"translate(-15px,-15px) rotate("
+plane.style.transform=
+
+"rotate("
 +
 smoothHeading+
 "deg)";
